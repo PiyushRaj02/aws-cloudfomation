@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Cloudformation template to create VPC with 2 public and private subnets and a NAT Gateway.
+Description: Cloudformation template to create VPC with 2 public and private subnets and a NAT Gateway in each AZ.
 
 Parameters: 
   EnvironmentName:  
@@ -126,12 +126,19 @@ Resources:
         - Key: Name 
           Value: !Join ["", [!Ref "AWS::StackName", "-PrivateRT"]]
   
-  DefaultPrivateRoute:
+  DefaultPrivateRoute1:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway 
+      NatGatewayId: !Ref NatGateway1 
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
 
   PrivateSubnetOneAssociationWithRouteTable:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
@@ -145,20 +152,33 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnetTwo
 
-  NatGateway:
+  NatGateway1:
     Type: "AWS::EC2::NatGateway"
     Properties:
-      AllocationId: !GetAtt ElasticIPAddress.AllocationId
+      AllocationId: !GetAtt ElasticIPAddress1.AllocationId
       SubnetId: !Ref PublicSubnetOne
       Tags:
         - Key: Name
-          Value: NatGateway
+          Value: NatGateway1
   
-  ElasticIPAddress:
+  ElasticIPAddress1:
     Type: AWS::EC2::EIP
     Properties:
       Domain: VPC
   
+  NatGateway2:
+    Type: "AWS::EC2::NatGateway"
+    Properties:
+      AllocationId: !GetAtt ElasticIPAddress2.AllocationId
+      SubnetId: !Ref PublicSubnetTwo
+      Tags:
+        - Key: Name
+          Value: NatGateway2
+  
+  ElasticIPAddress2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC
 
 Outputs:
   VPC:
