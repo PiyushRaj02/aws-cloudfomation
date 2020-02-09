@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Provision EC2 instance with UserData, EIP and security groups.
+
+# Select existing KeyPair to SSH to EC2instance
+Parameters:
+  KeyPair:
+    Description: KeyPair to login to EC2 instance over port 22
+    Type: AWS::EC2::KeyPair::KeyName
+     
+
+Resources:
+ # Creates EC2 instance with Apache installed 
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: ami-0c91f97cadcc8499e
+      InstanceType: t2.micro
+      KeyName: !Ref KeyPair
+      SecurityGroups:
+        - !Ref EC2InstanceSecurityGroup
+        - !Ref SSHSecurityGroup
+      UserData:
+        "Fn::Base64":
+          !Sub |
+            #!/bin/bash
+            yum -y update
+
+            # install apache
+            yum install httpd24 -y  
+            
+            # start server
+            service httpd start
+            chkconfig httpd on
+      Tags:
+        - Key: Name  
+          Value: EC2Instance
+  
+  # Security Group with port 80 opened over internet
+  EC2InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: EC2InstanceSecurityGroup
+      GroupDescription: App server connectivity port 80.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name 
+          Value: !Join [" ", [!Ref "AWS::StackName", '-AppInstance-SG']]
+
+  # Security group to SSH EC2 instance over port 22 from internet
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: SSHSecurityGroup
+      GroupDescription: SSH Security Group 
+      SecurityGroupIngress:
+        - IpProtocol: tcp  
+          ToPort: 22
+          FromPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name 
+          Value: !Join [" ", [!Ref "AWS::StackName", "-SSH-SG"]]
+
+  #Associate Elastic IP to EC2 instance  
+  EC2ElasticEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      InstanceId: !Ref EC2Instance
+      Tags:
+        - Key: Name
+          Value: !Join ["", [!Ref "AWS::StackName", "-EIP"]]
+    
+
